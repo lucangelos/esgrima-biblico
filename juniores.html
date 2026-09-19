@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nível Juniores · Embaixadores do Rei</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-nivel="juniores">
+  <main>
+    <div class="topo">
+      <a href="index.html">&larr; Início</a>
+      <img class="brasao-pequeno" src="brasao.png" alt="Brasão dos Embaixadores do Rei">
+    </div>
+
+    <h1 class="nivel-titulo">Nível Juniores</h1>
+    <p class="instrucao">Clique no botão para aparecer um versículo.</p>
+
+    <div id="versiculo" class="versiculo espera" aria-live="polite">Aguardando o sorteio</div>
+
+    <button id="sortear" class="botao" type="button">Sortear versículo</button>
+
+    <p id="progresso" class="progresso"></p>
+    <div class="barra" aria-hidden="true"><span id="barra"></span></div>
+    <ul id="historico" class="historico" aria-label="Versículos já sorteados"></ul>
+
+    <button id="reiniciar" class="reiniciar" type="button">Reiniciar sorteio</button>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>
