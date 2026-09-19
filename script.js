@@ -90,7 +90,9 @@ const NIVEIS = {
       "João 3:36",
       "Números 8:23",
       "1 Samuel 8:8",
-      "2 Crônicas 4:4"
+      "2 Crônicas 4:4",
+      "Salmos 137:3",
+      "Salmos 37:41 (não existe)"
     ]
   }
 };
