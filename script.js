@@ -27,7 +27,16 @@ const NIVEIS = {
       "Jó 43:21 (não existe)",
       "Tiago 3:19 (não existe)",
       "Esdras 2:35",
-      "Neemias 7:27"
+      "Neemias 7:27",
+      "Josué 1:9",
+      "Efésios 4:21",
+      "Atos 12:11",
+      "Rute 1:17",
+      "Levítico 21:14",
+      "Números 7:27",
+      "1 Timóteo 2:5",
+      "Ageu 1:1",
+      "Malaquias 4:7 (não existe)"
     ]
   },
   adolescentes: {
@@ -63,7 +72,9 @@ const NIVEIS = {
       "2 Samuel 24:9",
       "Rute 1:17",
       "Deuteronômio 28:67",
-      "Josué 1:9"
+      "Josué 1:9",
+      "Números 7:27",
+      "Malaquias 4:7 (não existe)"
     ]
   }
 };
