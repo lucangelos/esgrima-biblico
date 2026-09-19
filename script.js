@@ -36,7 +36,8 @@ const NIVEIS = {
       "Números 7:27",
       "1 Timóteo 2:5",
       "Ageu 1:1",
-      "Malaquias 4:7 (não existe)"
+      "Malaquias 4:7 (não existe)",
+      "Juízes 20:23"
     ]
   },
   adolescentes: {
@@ -74,7 +75,22 @@ const NIVEIS = {
       "Deuteronômio 28:67",
       "Josué 1:9",
       "Números 7:27",
-      "Malaquias 4:7 (não existe)"
+      "Malaquias 4:7 (não existe)",
+      "Juízes 20:23",
+      "Provérbios 31:31",
+      "Isaías 16:3",
+      "Jeremias 18:8",
+      "Ezequiel 25:11",
+      "Zacarias 2:4",
+      "Obadias 1:14",
+      "Jonas 3:1",
+      "Miquéias 6:7",
+      "Marcos 11:10",
+      "Lucas 9:45",
+      "João 3:36",
+      "Números 8:23",
+      "1 Samuel 8:8",
+      "2 Crônicas 4:4"
     ]
   }
 };
