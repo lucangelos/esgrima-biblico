@@ -1,7 +1,7 @@
 /* Embaixadores do Rei — telas, sorteio, histórico e geração de PDF.
    Único recurso externo: a biblioteca jsPDF, carregada sob demanda
    (via CDN) só quando alguém clica em "Baixar PDF". O resto é
-   JavaScript puro do navegador.*/
+   JavaScript puro do navegador*/
 (function () {
   "use strict";
 
