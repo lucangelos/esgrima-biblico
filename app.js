@@ -1,5 +1,7 @@
-/* Embaixadores do Rei — telas, sorteio e histórico.
-   Não usa bibliotecas: só JavaScript do navegador. */
+/* Embaixadores do Rei — telas, sorteio, histórico e geração de PDF.
+   Único recurso externo: a biblioteca jsPDF, carregada sob demanda
+   (via CDN) só quando alguém clica em "Baixar PDF". O resto é
+   JavaScript puro do navegador. */
 (function () {
   "use strict";
 
@@ -20,6 +22,7 @@
     shuffle: '<path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.1-8.6c.7-1.1 2-1.7 3.3-1.7H22"/><path d="m18 2 4 4-4 4"/><path d="M2 6h1.9c1.5 0 2.9.9 3.6 2.2"/><path d="M22 18h-5.9c-1.3 0-2.6-.7-3.3-1.8l-.5-.8"/><path d="m18 14 4 4-4 4"/>',
     check: '<path d="M20 6 9 17l-5-5"/>',
     construction: '<rect x="2" y="6" width="20" height="8" rx="1"/><path d="M17 14v7"/><path d="M7 14v7"/><path d="M10 14v3"/><path d="M14 14v3"/><path d="M15 7v3"/><path d="M9 7v3"/>',
+    download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>',
   };
 
   function icon(name, size, strokeWidth) {
@@ -71,6 +74,164 @@
   function pick(list) {
     const index = Math.floor(Math.random() * list.length);
     return list.splice(index, 1)[0];
+  }
+
+  /* ======================================================================
+     PDF: gera "perguntas + gabarito" de um nível, usando jsPDF.
+     A biblioteca só é baixada (de um CDN) na primeira vez que o
+     usuário pede um PDF, e fica guardada para os próximos cliques.
+     ====================================================================== */
+  const JSPDF_SRC = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js";
+  let jsPdfPromise = null;
+
+  function loadJsPdf() {
+    if (window.jspdf && window.jspdf.jsPDF) return Promise.resolve(window.jspdf.jsPDF);
+    if (jsPdfPromise) return jsPdfPromise;
+
+    jsPdfPromise = new Promise(function (resolve, reject) {
+      const script = document.createElement("script");
+      script.src = JSPDF_SRC;
+      script.onload = function () {
+        if (window.jspdf && window.jspdf.jsPDF) resolve(window.jspdf.jsPDF);
+        else reject(new Error("jsPDF carregou, mas não foi encontrado em window.jspdf."));
+      };
+      script.onerror = function () {
+        jsPdfPromise = null; // permite tentar de novo numa próxima vez
+        reject(new Error("Não foi possível carregar o gerador de PDF. Verifique a internet."));
+      };
+      document.head.appendChild(script);
+    });
+
+    return jsPdfPromise;
+  }
+
+  function slugifyFileName(text) {
+    return String(text)
+      .normalize("NFD").replace(/[̀-ͯ]/g, "") // remove acentos
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+  }
+
+  /* Monta e baixa o PDF de um nível de perguntas: todas as questões
+     com alternativas A-D, e no final uma página de gabarito. */
+  function buildQuizPdf(sectionTitle, level) {
+    return loadJsPdf().then(function (JsPDF) {
+      const doc = new JsPDF({ unit: "pt", format: "a4" });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 56;
+      const maxWidth = pageWidth - margin * 2;
+      let y = margin;
+
+      function ensureSpace(linesHeight) {
+        if (y + linesHeight > pageHeight - margin) {
+          doc.addPage();
+          y = margin;
+        }
+      }
+
+      function writeLines(lines, fontSize, lineGap, options) {
+        options = options || {};
+        doc.setFontSize(fontSize);
+        doc.setFont("helvetica", options.bold ? "bold" : "normal");
+        lines.forEach(function (line) {
+          ensureSpace(lineGap);
+          doc.text(line, margin + (options.indent || 0), y);
+          y += lineGap;
+        });
+      }
+
+      /* Cabeçalho */
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(18);
+      doc.text("EMBAIXADORES DO REI", margin, y);
+      y += 26;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(13);
+      doc.text(sectionTitle, margin, y);
+      y += 18;
+      doc.text("Nível " + level.name + " (" + level.difficulty + ")", margin, y);
+      y += 14;
+
+      doc.setDrawColor(17, 20, 122); // #10147A
+      doc.setLineWidth(1.2);
+      doc.line(margin, y, pageWidth - margin, y);
+      y += 28;
+
+      const letters = ["A", "B", "C", "D"];
+
+      /* Perguntas */
+      level.questions.forEach(function (q, index) {
+        const questionLines = doc.splitTextToSize(
+          (index + 1) + ". " + q.question,
+          maxWidth
+        );
+        ensureSpace(questionLines.length * 16 + 8);
+        writeLines(questionLines, 12, 16, { bold: true });
+        y += 4;
+
+        letters.forEach(function (letter) {
+          const value = q.options && q.options[letter];
+          const text = letter + ") " + (value ? value : "_______________________________");
+          const optLines = doc.splitTextToSize(text, maxWidth - 16);
+          writeLines(optLines, 11, 15, { indent: 16 });
+        });
+
+        y += 14;
+      });
+
+      /* Gabarito, sempre numa página nova */
+      doc.addPage();
+      y = margin;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.text("Gabarito", margin, y);
+      y += 10;
+      doc.setDrawColor(17, 20, 122);
+      doc.line(margin, y, pageWidth - margin, y);
+      y += 26;
+
+      doc.setFontSize(12);
+      level.questions.forEach(function (q, index) {
+        ensureSpace(18);
+        doc.setFont("helvetica", "bold");
+        doc.text(String(index + 1) + ".", margin, y);
+        doc.setFont("helvetica", "normal");
+        const answerLabel = q.correctOption
+          ? q.correctOption + ") " + (q.options[q.correctOption] || q.answer)
+          : q.answer;
+        const answerLines = doc.splitTextToSize(answerLabel, maxWidth - 28);
+        doc.text(answerLines, margin + 28, y);
+        y += answerLines.length * 15 + 4;
+      });
+
+      const fileName = "embaixadores-do-rei-" + slugifyFileName(sectionTitle) + "-" + level.slug + ".pdf";
+      doc.save(fileName);
+    });
+  }
+
+  /* Cria o botão "Baixar PDF" e liga o clique à geração do PDF.
+     id: id do botão no HTML. sectionTitle/level: dados para o PDF. */
+  function wirePdfButton(id, sectionTitle, level) {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    const originalHtml = btn.innerHTML;
+
+    btn.addEventListener("click", function () {
+      btn.disabled = true;
+      btn.innerHTML = icon("download", 16) + " Gerando PDF...";
+
+      buildQuizPdf(sectionTitle, level)
+        .catch(function (err) {
+          window.alert(err && err.message ? err.message : "Não foi possível gerar o PDF.");
+        })
+        .then(function () {
+          btn.disabled = false;
+          btn.innerHTML = originalHtml;
+        });
+    });
   }
 
   /* --- início ---------------------------------------------------------- */
@@ -254,6 +415,11 @@
           " <span>/ " + total + "</span></strong></div>" +
           '<progress class="draw-progress" value="' + state.history.length + '" max="' + total + '" aria-label="Perguntas sorteadas"></progress>' +
         "</section>" +
+        '<div class="pdf-tools">' +
+          '<button class="btn quiet-button pdf-button" id="pdf-btn" type="button">' +
+          icon("download", 16) + " Baixar PDF (perguntas + gabarito)</button>" +
+          '<p class="pdf-hint">Gera um PDF com as ' + total + ' perguntas deste nível e, ao final, o gabarito.</p>' +
+        "</div>" +
         '<div class="history-heading"><h2>' + icon("history", 18) + " Histórico <span>" + state.history.length + "</span></h2>" +
         '<button class="btn quiet-button" id="reset-btn"' + (state.history.length ? "" : " disabled") + ">" +
         icon("rotateCcw", 16) + " Reiniciar perguntas</button></div>" +
@@ -280,6 +446,8 @@
       state = { available: level.questions.slice(), history: [], revealed: false, confirmReset: false };
       paintQuiz(config, level);
     });
+
+    wirePdfButton("pdf-btn", config.title, level);
   }
 
   /* --- atividade ainda em construção ------------------------------------ */
