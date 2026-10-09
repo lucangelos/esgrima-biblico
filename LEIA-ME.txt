@@ -1,0 +1,32 @@
+/* Embaixadores do Rei — versão HTML, CSS e JavaScript
+
+Site completo sem dependências: só arquivos .html, .css e .js.
+Não precisa instalar nada nem usar npm.
+
+Como abrir
+- Só ver o site: dê dois cliques em index.html
+- Publicar: envie a pasta inteira para qualquer hospedagem estática
+  (Netlify, Vercel, GitHub Pages, cPanel, servidor próprio).
+  O endereço inicial é index.html.
+
+Como editar
+- Versículos e perguntas: tudo fica em data.js
+- Cores, fontes e espaçamentos: ficam em styles.css, no bloco :root
+- Textos e telas: ficam em app.js
+
+Navegação (links internos)
+- #/                                  início, com as quatro atividades
+- #/esgrima                           escolha de nível da Esgrima Bíblica
+- #/esgrima/juniores                  sorteio de um nível
+- #/atividades/organizacao            Perguntas Gerais da Organização
+- #/atividades/biblia                 Perguntas Gerais da Bíblia
+- #/atividades/personagem             Perguntas Gerais Bíblica + Organização
+
+Arquivos
+- index.html                          página única
+- styles.css                          visual
+- data.js                             versículos, perguntas e listas
+- app.js                              telas, sorteio e histórico
+- assets/embaixadores-logo.png        brasão
+- favicon.png                         ícone da aba
+*/
