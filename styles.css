@@ -210,4 +210,48 @@ img { max-width: 100%; }
   .question-answer { font-size: 16px; }
   .quiz-tool .draw-action { white-space: normal; height: auto; min-height: 48px; padding: 12px 20px; }
 }
+
+/* --- Botão de baixar PDF ------------------------------------------- */
+.pdf-tools {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1.75rem 0;
+  padding: 1.5rem;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px dashed rgba(255, 229, 0, 0.45);
+  border-radius: 18px;
+}
+
+.pdf-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.pdf-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: #FFE500;
+  color: #FFE500;
+}
+
+.pdf-button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+  transform: none;
+}
+
+.pdf-button svg {
+  flex-shrink: 0;
+}
+
+.pdf-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.65);
+}
+
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
