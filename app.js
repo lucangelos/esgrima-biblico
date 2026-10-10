@@ -164,12 +164,25 @@
         writeLines(questionLines, 12, 16, { bold: true });
         y += 4;
 
-        letters.forEach(function (letter) {
-          const value = q.options && q.options[letter];
-          const text = letter + ") " + (value ? value : "_______________________________");
-          const optLines = doc.splitTextToSize(text, maxWidth - 16);
-          writeLines(optLines, 11, 15, { indent: 16 });
-        });
+        if (q.options) {
+          /* Pergunta de múltipla escolha: desenha as 4 alternativas. */
+          letters.forEach(function (letter) {
+            const value = q.options[letter];
+            const text = letter + ") " + (value ? value : "_______________________________");
+            const optLines = doc.splitTextToSize(text, maxWidth - 16);
+            writeLines(optLines, 11, 15, { indent: 16 });
+          });
+        } else {
+          /* Pergunta dissertativa (sem "options" no data.js): desenha
+             linhas em branco para a resposta ser escrita à mão. */
+          for (let i = 0; i < 3; i += 1) {
+            ensureSpace(22);
+            doc.setDrawColor(150, 150, 150);
+            doc.setLineWidth(0.6);
+            doc.line(margin + 16, y, pageWidth - margin, y);
+            y += 22;
+          }
+        }
 
         y += 14;
       });
