@@ -1,7 +1,13 @@
 /* Embaixadores do Rei — telas, sorteio, histórico e geração de PDF.
-   Único recurso externo: a biblioteca jsPDF, carregada sob demanda
-   (via CDN) só quando alguém clica em "Baixar PDF". O resto é
-   JavaScript puro do navegador*/
+   A geração de PDF usa a biblioteca jsPDF, que deve ser incluída
+   no HTML através de uma tag <script> normal, ANTES deste arquivo:
+
+     <script src="vendor/jspdf.umd.min.js"></script>
+     <script src="app.js"></script>
+
+   Isso evita problemas de injeção dinâmica de script (bloqueios de
+   CORB/CSP, falhas de CDN) — o navegador carrega o jsPDF do mesmo
+   jeito que carrega qualquer outro arquivo do seu projeto. */
 (function () {
   "use strict";
 
@@ -78,31 +84,17 @@
 
   /* ======================================================================
      PDF: gera "perguntas + gabarito" de um nível, usando jsPDF.
-     A biblioteca só é baixada (de um CDN) na primeira vez que o
-     usuário pede um PDF, e fica guardada para os próximos cliques.
+     A biblioteca é carregada por uma tag <script> comum no HTML
+     (vendor/jspdf.umd.min.js), não é injetada dinamicamente — isso
+     evita bloqueios de CORB/CSP que a injeção via CDN pode sofrer.
      ====================================================================== */
-  const JSPDF_SRC = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js";
-  let jsPdfPromise = null;
-
   function loadJsPdf() {
     if (window.jspdf && window.jspdf.jsPDF) return Promise.resolve(window.jspdf.jsPDF);
-    if (jsPdfPromise) return jsPdfPromise;
-
-    jsPdfPromise = new Promise(function (resolve, reject) {
-      const script = document.createElement("script");
-      script.src = JSPDF_SRC;
-      script.onload = function () {
-        if (window.jspdf && window.jspdf.jsPDF) resolve(window.jspdf.jsPDF);
-        else reject(new Error("jsPDF carregou, mas não foi encontrado em window.jspdf."));
-      };
-      script.onerror = function () {
-        jsPdfPromise = null; // permite tentar de novo numa próxima vez
-        reject(new Error("Não foi possível carregar o gerador de PDF. Verifique a internet."));
-      };
-      document.head.appendChild(script);
-    });
-
-    return jsPdfPromise;
+    return Promise.reject(new Error(
+      "O gerador de PDF (jsPDF) não foi encontrado. Confira se a tag " +
+      '<script src="vendor/jspdf.umd.min.js"></script> está no HTML, ' +
+      "antes do <script src=\"app.js\">."
+    ));
   }
 
   function slugifyFileName(text) {

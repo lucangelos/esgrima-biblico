@@ -1,5 +1,5 @@
 /* Embaixadores do Rei — dados das atividades.
-   Edite as listas abaixo para mudar versículos e perguntas.*/
+   Edite as listas abaixo para mudar versículos e perguntas. */
 window.ER = (function () {
   "use strict";
 
