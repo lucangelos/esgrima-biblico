@@ -1,13 +1,3 @@
-/* Embaixadores do Rei — telas, sorteio, histórico e geração de PDF.
-   A geração de PDF usa a biblioteca jsPDF, que deve ser incluída
-   no HTML através de uma tag <script> normal, ANTES deste arquivo:
-
-     <script src="vendor/jspdf.umd.min.js"></script>
-     <script src="app.js"></script>
-
-   Isso evita problemas de injeção dinâmica de script (bloqueios de
-   CORB/CSP, falhas de CDN) — o navegador carrega o jsPDF do mesmo
-   jeito que carrega qualquer outro arquivo do seu projeto. */
 (function () {
   "use strict";
 
@@ -105,111 +95,158 @@
       .replace(/(^-|-$)/g, "");
   }
 
-  /* Monta e baixa o PDF de um nível de perguntas: todas as questões
-     com alternativas A-D, e no final uma página de gabarito. */
+  /* Monta e baixa o PDF de um nível de perguntas, seguindo o modelo
+     "Prova Montagem Bíblica": título, campos de Nome/Data/Embaixada/
+     Nota, perguntas distribuídas em três colunas, e — numa página
+     separada — o gabarito compacto (formato "1-B"). */
   function buildQuizPdf(sectionTitle, level) {
     return loadJsPdf().then(function (JsPDF) {
       const doc = new JsPDF({ unit: "pt", format: "a4" });
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
-      const margin = 56;
-      const maxWidth = pageWidth - margin * 2;
-      let y = margin;
+      const margin = 48;
+      const letters = ["A", "B", "C", "D"];
 
-      function ensureSpace(linesHeight) {
-        if (y + linesHeight > pageHeight - margin) {
-          doc.addPage();
-          y = margin;
+      const columnGap = 20;
+      const columnCount = 3;
+      const columnWidth = (pageWidth - margin * 2 - columnGap * (columnCount - 1)) / columnCount;
+
+      function columnX(col) {
+        return margin + col * (columnWidth + columnGap);
+      }
+
+      /* Calcula a altura que a pergunta vai ocupar na coluna, sem
+         desenhar nada — usado para decidir se ela cabe no espaço
+         restante ou se deve pular para a próxima coluna/página. */
+      function measureQuestion(q, index) {
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        const qLines = doc.splitTextToSize((index + 1) + ". " + q.question, columnWidth);
+        let height = qLines.length * 13 + 8;
+
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        if (q.options) {
+          letters.forEach(function (letter) {
+            const value = q.options[letter];
+            const text = letter + ") " + (value || "_____________________");
+            const lines = doc.splitTextToSize(text, columnWidth - 10);
+            height += lines.length * 13;
+          });
+        } else {
+          height += 13; // uma única linha para a resposta ser escrita à mão
         }
+        return height + 20;
       }
 
-      function writeLines(lines, fontSize, lineGap, options) {
-        options = options || {};
-        doc.setFontSize(fontSize);
-        doc.setFont("helvetica", options.bold ? "bold" : "normal");
-        lines.forEach(function (line) {
-          ensureSpace(lineGap);
-          doc.text(line, margin + (options.indent || 0), y);
-          y += lineGap;
+      /* Desenha a pergunta a partir de (x, y) e devolve o novo y. */
+      function drawQuestion(q, index, x, y) {
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        const qLines = doc.splitTextToSize((index + 1) + ". " + q.question, columnWidth);
+        qLines.forEach(function (line) {
+          doc.text(line, x, y);
+          y += 13;
         });
+        y += 8;
+
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        if (q.options) {
+          letters.forEach(function (letter) {
+            const value = q.options[letter];
+            const text = letter + ") " + (value || "_____________________");
+            const lines = doc.splitTextToSize(text, columnWidth - 10);
+            lines.forEach(function (line) {
+              doc.text(line, x + 10, y);
+              y += 13;
+            });
+          });
+        } else {
+          /* Pergunta dissertativa: uma única linha para escrever a resposta. */
+          doc.setDrawColor(150, 150, 150);
+          doc.setLineWidth(0.6);
+          doc.line(x + 10, y, x + columnWidth, y);
+          y += 13;
+        }
+
+        return y + 20;
       }
 
-      /* Cabeçalho */
+      /* Cabeçalho: título da prova + campos para preencher à mão. */
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(18);
-      doc.text("EMBAIXADORES DO REI", margin, y);
-      y += 26;
+      doc.setFontSize(16);
+      doc.text(sectionTitle + " – " + level.name, pageWidth / 2, margin, { align: "center" });
 
+      let y = margin + 40;
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.text("Nome:", margin, y);
+      doc.text("Data:", margin + 320, y);
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(13);
-      doc.text(sectionTitle, margin, y);
-      y += 18;
-      doc.text("Nível " + level.name + " (" + level.difficulty + ")", margin, y);
-      y += 14;
+      doc.text("_______________________________________________", margin + 38, y);
+      doc.text("______/______/__________.", margin + 355, y);
 
+      y += 22;
+      doc.setFont("helvetica", "bold");
+      doc.text("Embaixada:", margin, y);
+      doc.text("Nota:", margin + 320, y);
+      doc.setFont("helvetica", "normal");
+      doc.text("___________________________________________", margin + 66, y);
+      doc.text("___________________________", margin + 355, y);
+
+      y += 30;
       doc.setDrawColor(17, 20, 122); // #10147A
       doc.setLineWidth(1.2);
       doc.line(margin, y, pageWidth - margin, y);
-      y += 28;
 
-      const letters = ["A", "B", "C", "D"];
+      const questionsStartY = y + 30;
+      const bottomLimit = pageHeight - margin;
 
-      /* Perguntas */
+      let col = 0;
+      let colY = questionsStartY;
+
+      /* Perguntas, distribuídas nas três colunas */
       level.questions.forEach(function (q, index) {
-        const questionLines = doc.splitTextToSize(
-          (index + 1) + ". " + q.question,
-          maxWidth
-        );
-        ensureSpace(questionLines.length * 16 + 8);
-        writeLines(questionLines, 12, 16, { bold: true });
-        y += 4;
+        const h = measureQuestion(q, index);
 
-        if (q.options) {
-          /* Pergunta de múltipla escolha: desenha as 4 alternativas. */
-          letters.forEach(function (letter) {
-            const value = q.options[letter];
-            const text = letter + ") " + (value ? value : "_______________________________");
-            const optLines = doc.splitTextToSize(text, maxWidth - 16);
-            writeLines(optLines, 11, 15, { indent: 16 });
-          });
-        } else {
-          /* Pergunta dissertativa (sem "options" no data.js): desenha
-             linhas em branco para a resposta ser escrita à mão. */
-          for (let i = 0; i < 3; i += 1) {
-            ensureSpace(22);
-            doc.setDrawColor(150, 150, 150);
-            doc.setLineWidth(0.6);
-            doc.line(margin + 16, y, pageWidth - margin, y);
-            y += 22;
+        if (colY + h > bottomLimit) {
+          col += 1;
+          colY = questionsStartY;
+          if (col >= columnCount) {
+            doc.addPage();
+            col = 0;
+            colY = margin;
           }
         }
 
-        y += 14;
+        colY = drawQuestion(q, index, columnX(col), colY);
       });
 
-      /* Gabarito, sempre numa página nova */
+      /* Gabarito, sempre numa página nova, no formato "1-B" */
       doc.addPage();
-      y = margin;
+      let gy = margin;
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(16);
-      doc.text("Gabarito", margin, y);
-      y += 10;
-      doc.setDrawColor(17, 20, 122);
-      doc.line(margin, y, pageWidth - margin, y);
-      y += 26;
+      doc.setFontSize(14);
+      doc.text(
+        "GABARITO – " + level.name.toUpperCase() + " (" + level.questions.length + " questões)",
+        margin, gy
+      );
+      gy += 24;
 
-      doc.setFontSize(12);
+      doc.setFontSize(11);
       level.questions.forEach(function (q, index) {
-        ensureSpace(18);
+        if (gy > pageHeight - margin) {
+          doc.addPage();
+          gy = margin;
+        }
         doc.setFont("helvetica", "bold");
-        doc.text(String(index + 1) + ".", margin, y);
-        doc.setFont("helvetica", "normal");
         const answerLabel = q.correctOption
-          ? q.correctOption + ") " + (q.options[q.correctOption] || q.answer)
-          : q.answer;
-        const answerLines = doc.splitTextToSize(answerLabel, maxWidth - 28);
-        doc.text(answerLines, margin + 28, y);
-        y += answerLines.length * 15 + 4;
+          ? (index + 1) + "-" + q.correctOption
+          : (index + 1) + ". " + q.answer;
+        const lines = doc.splitTextToSize(answerLabel, pageWidth - margin * 2);
+        doc.text(lines, margin, gy);
+        gy += lines.length * 16;
       });
 
       const fileName = "embaixadores-do-rei-" + slugifyFileName(sectionTitle) + "-" + level.slug + ".pdf";
@@ -266,7 +303,7 @@
     ), true);
   }
 
-  /* --- esgrima: escolha de nível --------------------------------------- */
+  /* --- esgrima: escolha de nível ----------------------------------*/
   function renderEsgrimaLevels() {
     setTitle("Esgrima Bíblica");
     const cards = window.ER.levels.map(function (level, i) {
