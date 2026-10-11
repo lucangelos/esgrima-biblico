@@ -1,3 +1,13 @@
+/* Embaixadores do Rei — telas, sorteio, histórico e geração de PDF.
+   A geração de PDF usa a biblioteca jsPDF, que deve ser incluída
+   no HTML através de uma tag <script> normal, ANTES deste arquivo:
+
+     <script src="vendor/jspdf.umd.min.js"></script>
+     <script src="app.js"></script>
+
+   Isso evita problemas de injeção dinâmica de script (bloqueios de
+   CORB/CSP, falhas de CDN) — o navegador carrega o jsPDF do mesmo
+   jeito que carrega qualquer outro arquivo do seu projeto. */
 (function () {
   "use strict";
 
@@ -134,7 +144,7 @@
             height += lines.length * 13;
           });
         } else {
-          height += 13; // uma única linha para a resposta ser escrita à mão
+          height += 13 * 2; // duas linhas para a resposta ser escrita à mão
         }
         return height + 20;
       }
@@ -163,11 +173,13 @@
             });
           });
         } else {
-          /* Pergunta dissertativa: uma única linha para escrever a resposta. */
+          /* Pergunta dissertativa: duas linhas para escrever a resposta. */
           doc.setDrawColor(150, 150, 150);
           doc.setLineWidth(0.6);
-          doc.line(x + 10, y, x + columnWidth, y);
-          y += 13;
+          for (let i = 0; i < 2; i += 1) {
+            doc.line(x + 10, y, x + columnWidth, y);
+            y += 13;
+          }
         }
 
         return y + 20;
@@ -303,7 +315,7 @@
     ), true);
   }
 
-  /* --- esgrima: escolha de nível ----------------------------------*/
+  /* --- esgrima: escolha de nível --------------------------------------- */
   function renderEsgrimaLevels() {
     setTitle("Esgrima Bíblica");
     const cards = window.ER.levels.map(function (level, i) {
